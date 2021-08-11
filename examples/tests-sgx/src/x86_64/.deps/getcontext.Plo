@@ -1,0 +1,8 @@
+x86_64/getcontext.lo: \
+ /root/dev/incubator-teaclave-sgx-sdk/sgx_unwind/libunwind/src/x86_64/getcontext.S \
+ /usr/include/stdc-predef.h \
+ /root/dev/incubator-teaclave-sgx-sdk/sgx_unwind/libunwind/src/x86_64/ucontext_i.h
+
+/usr/include/stdc-predef.h:
+
+/root/dev/incubator-teaclave-sgx-sdk/sgx_unwind/libunwind/src/x86_64/ucontext_i.h:

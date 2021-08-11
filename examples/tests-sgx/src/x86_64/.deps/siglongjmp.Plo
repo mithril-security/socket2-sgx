@@ -1,0 +1,5 @@
+x86_64/siglongjmp.lo: \
+ /root/dev/incubator-teaclave-sgx-sdk/sgx_unwind/libunwind/src/x86_64/siglongjmp.S \
+ /usr/include/stdc-predef.h
+
+/usr/include/stdc-predef.h:

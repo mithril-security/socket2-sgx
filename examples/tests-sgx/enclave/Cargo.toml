@@ -1,0 +1,34 @@
+cargo-features = ["resolver"]
+[package]
+name = "template"
+version = "1.0.0"
+edition = "2018"
+authors = ["htmai-880"]
+resolver = "2"
+[lib]
+name = "sample" # Library name. If you change this, please reflect those changes in the Makefile on the variable ENCLAVE_CARGO_LIB
+crate-type = ["staticlib"] 
+[features]
+default = ["net", "thread", "untrusted_time"]
+untrusted_time = []
+thread = []
+
+# Enables module containing networking primitives.
+net = []
+
+# Deprecated features, will be removed in a future version.
+extra-docs = [] # Docs are now always present.
+tcp = ["net"] # Replaced with "net" feature.
+udp = ["net"] # Replaced with "net" feature.
+uds = ["net"] # Replaced with "net" feature.
+
+[dependencies]
+socket2 = { path = "/root/dev/socket2-sgx"}
+
+[patch.crates-io]
+
+
+
+
+
+

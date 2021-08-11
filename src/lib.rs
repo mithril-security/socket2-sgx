@@ -59,6 +59,9 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
+#[cfg(target_env = "sgx")]
+extern crate sgx_libc as libc;
+
 use std::fmt;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
@@ -102,7 +105,7 @@ macro_rules! from {
     ($from: ty, $for: ty) => {
         impl From<$from> for $for {
             fn from(socket: $from) -> $for {
-                #[cfg(unix)]
+                #[cfg(any(unix, target_env = "sgx"))]
                 unsafe {
                     <$for>::from_raw_fd(socket.into_raw_fd())
                 }
@@ -119,7 +122,7 @@ mod sockaddr;
 mod socket;
 mod sockref;
 
-#[cfg(unix)]
+#[cfg(any(unix, target_env = "sgx"))]
 #[path = "sys/unix.rs"]
 mod sys;
 #[cfg(windows)]
@@ -374,6 +377,7 @@ impl TcpKeepalive {
             target_os = "netbsd",
             target_vendor = "apple",
             windows,
+            target_env = "sgx"
         )
     ))]
     #[cfg_attr(
@@ -387,6 +391,7 @@ impl TcpKeepalive {
                 target_os = "netbsd",
                 target_vendor = "apple",
                 windows,
+                target_env = "sgx"
             )
         )))
     )]
@@ -411,6 +416,7 @@ impl TcpKeepalive {
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
+            target_env = "sgx"
         )
     ))]
     #[cfg_attr(
@@ -423,6 +429,7 @@ impl TcpKeepalive {
                 target_os = "linux",
                 target_os = "netbsd",
                 target_vendor = "apple",
+                target_env = "sgx"
             )
         )))
     )]

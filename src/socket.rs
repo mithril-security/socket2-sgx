@@ -12,7 +12,7 @@ use std::io::{self, Read, Write};
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::MaybeUninit;
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-#[cfg(unix)]
+#[cfg(any(unix, target_env = "sgx"))]
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 #[cfg(windows)]
 use std::os::windows::io::{FromRawSocket, IntoRawSocket};
@@ -97,7 +97,7 @@ impl Socket {
                 // Violating this assumption (fd never negative) causes UB,
                 // something we don't want. So check for that we have this
                 // `assert!`.
-                #[cfg(unix)]
+                #[cfg(any(unix, target_env = "sgx"))]
                 assert!(raw >= 0, "tried to create a `Socket` with an invalid fd");
                 sys::socket_from_raw(raw)
             },
@@ -142,8 +142,8 @@ impl Socket {
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
-    #[cfg(any(doc, all(feature = "all", unix)))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
+    #[cfg(any(doc, all(feature = "all", any(unix, target_env = "sgx"))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(unix, target_env = "sgx")))))]
     pub fn pair(
         domain: Domain,
         ty: Type,
@@ -159,8 +159,8 @@ impl Socket {
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.
-    #[cfg(any(doc, all(feature = "all", unix)))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
+    #[cfg(any(doc, all(feature = "all", any(unix, target_env = "sgx"))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(unix, target_env = "sgx")))))]
     pub fn pair_raw(
         domain: Domain,
         ty: Type,
@@ -224,7 +224,7 @@ impl Socket {
         match res {
             Ok(()) => return Ok(()),
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
-            #[cfg(unix)]
+            #[cfg(any(unix, target_env = "sgx"))]
             Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
             Err(e) => return Err(e),
         }
@@ -690,7 +690,7 @@ fn set_common_type(ty: Type) -> Type {
 fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
     #[cfg(all(
-        unix,
+        any(unix, target_env = "sgx"),
         not(any(
             target_os = "android",
             target_os = "dragonfly",

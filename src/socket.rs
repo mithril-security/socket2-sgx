@@ -1167,6 +1167,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_env = "sgx"
     )))]
     pub fn leave_multicast_v4_n(
         &self,

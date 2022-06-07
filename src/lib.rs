@@ -1,8 +1,8 @@
 // Copyright 2015 The Rust Project Developers.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// https://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
@@ -50,7 +50,7 @@
 //! This crate has a single feature `all`, which enables all functions even ones
 //! that are not available on all OSs.
 
-#![doc(html_root_url = "https://docs.rs/socket2/0.3")]
+#![doc(html_root_url = "https://docs.rs/socket2/0.4")]
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 // Show required OS/features on docs.rs.
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -81,7 +81,7 @@ macro_rules! impl_debug {
             $(#[$target: meta])*
             // The flag(s) to check.
             // Need to specific the libc crate because Windows doesn't use
-            // `libc` but `winapi`.
+            // `libc` but `windows_sys`.
             $libc: ident :: $flag: ident
         ),+ $(,)*
     ) => {
@@ -129,11 +129,23 @@ mod sys;
 #[path = "sys/windows.rs"]
 mod sys;
 
+#[cfg(not(any(windows, unix)))]
+compile_error!("Socket2 doesn't support the compile target");
+
 use sys::c_int;
 
 pub use sockaddr::SockAddr;
 pub use socket::Socket;
 pub use sockref::SockRef;
+
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+pub use socket::InterfaceIndexOrAddress;
 
 /// Specification of the communication domain for a socket.
 ///
@@ -285,10 +297,6 @@ impl RecvFlags {
 #[repr(transparent)]
 pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
 
-unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
-
-unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
-
 impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self.0.as_slice(), fmt)
@@ -326,9 +334,9 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
     time: Option<Duration>,
-    #[cfg_attr(target_os = "redox", allow(dead_code))]
+    #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
     interval: Option<Duration>,
-    #[cfg_attr(target_os = "redox", allow(dead_code))]
+    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
     retries: Option<u32>,
 }
 
@@ -337,7 +345,9 @@ impl TcpKeepalive {
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
             interval: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
             retries: None,
         }
     }

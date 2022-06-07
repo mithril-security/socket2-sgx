@@ -1,3 +1,4 @@
+#![allow(clippy::bool_assert_comparison)]
 #[cfg(all(
     feature = "all",
     any(
@@ -39,11 +40,7 @@ use std::time::Duration;
 use std::{env, fs};
 
 #[cfg(windows)]
-use winapi::shared::minwindef::DWORD;
-#[cfg(windows)]
-use winapi::um::handleapi::GetHandleInformation;
-#[cfg(windows)]
-use winapi::um::winbase::HANDLE_FLAG_INHERIT;
+use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 
 #[cfg(not(target_os = "redox"))]
 use socket2::MaybeUninitSlice;
@@ -319,7 +316,7 @@ pub fn assert_flag_no_inherit<S>(socket: &S, want: bool)
 where
     S: AsRawSocket,
 {
-    let mut flags: DWORD = 0;
+    let mut flags = 0;
     if unsafe { GetHandleInformation(socket.as_raw_socket() as _, &mut flags) } == 0 {
         let err = io::Error::last_os_error();
         panic!("unexpected error: {}", err);
@@ -493,7 +490,7 @@ fn out_of_band() {
 
     let (receiver, _) = listener.accept().unwrap();
 
-    sender.send(&DATA).unwrap();
+    sender.send(DATA).unwrap();
 
     const FIRST: &[u8] = b"!";
     assert_eq!(sender.send_out_of_band(FIRST).unwrap(), FIRST.len());
@@ -1082,11 +1079,11 @@ macro_rules! test {
 
         let initial = socket.$get_fn().expect("failed to get initial value");
         let arg = $arg;
-        let expected = $expected;
         assert_ne!(initial, arg, "initial value and argument are the same");
 
         socket.$set_fn(arg).expect("failed to set option");
         let got = socket.$get_fn().expect("failed to get value");
+        let expected = $expected;
         assert_eq!(got, expected, "set and get values differ");
     };
 }
@@ -1136,6 +1133,21 @@ test!(
     mark,
     set_mark(123)
 );
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+test!(cork, set_cork(true));
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+test!(quickack, set_quickack(false));
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+test!(thin_linear_timeouts, set_thin_linear_timeouts(true));
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
@@ -1156,6 +1168,17 @@ test!(IPv4 ttl, set_ttl(40));
     target_os = "illumos",
 )))]
 test!(IPv4 tos, set_tos(96));
+
+#[cfg(not(any(
+    target_os = "fuschia",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "windows",
+)))]
+test!(IPv4 recv_tos, set_recv_tos(true));
+
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
 
@@ -1174,3 +1197,71 @@ test!(
     tcp_user_timeout,
     set_tcp_user_timeout(Some(Duration::from_secs(10)))
 );
+
+#[test]
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+fn join_leave_multicast_v4_n() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    let multiaddr = Ipv4Addr::new(224, 0, 1, 1);
+    let interface = socket2::InterfaceIndexOrAddress::Index(0);
+    match socket.leave_multicast_v4_n(&multiaddr, &interface) {
+        Ok(()) => panic!("leaving an unjoined group should fail"),
+        Err(err) => {
+            assert_eq!(err.kind(), io::ErrorKind::AddrNotAvailable);
+            #[cfg(unix)]
+            assert_eq!(err.raw_os_error(), Some(libc::EADDRNOTAVAIL));
+        }
+    };
+    let () = socket
+        .join_multicast_v4_n(&multiaddr, &interface)
+        .expect("join multicast group");
+    let () = socket
+        .leave_multicast_v4_n(&multiaddr, &interface)
+        .expect("leave multicast group");
+}
+
+#[test]
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "fuchsia",
+)))]
+fn join_leave_ssm_v4() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    let g = Ipv4Addr::new(232, 123, 52, 36);
+    let s = Ipv4Addr::new(62, 40, 109, 31);
+    let interface = Ipv4Addr::new(0, 0, 0, 0);
+    let () = socket.join_ssm_v4(&s, &g, &interface).expect("Joined SSM");
+    let () = socket.leave_ssm_v4(&s, &g, &interface).expect("Left SSM");
+}
+
+#[test]
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+fn header_included() {
+    let socket = match Socket::new(Domain::IPV4, Type::RAW, None) {
+        Ok(socket) => socket,
+        // Need certain permissions to create a raw sockets.
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => return,
+        #[cfg(unix)]
+        Err(ref err) if err.raw_os_error() == Some(libc::EPROTONOSUPPORT) => return,
+        Err(err) => panic!("unexpected error creating socket: {}", err),
+    };
+
+    let initial = socket
+        .header_included()
+        .expect("failed to get initial value");
+    assert_eq!(initial, false, "initial value and argument are the same");
+
+    socket
+        .set_header_included(true)
+        .expect("failed to set option");
+    let got = socket.header_included().expect("failed to get value");
+    assert_eq!(got, true, "set and get values differ");
+}

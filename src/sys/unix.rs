@@ -86,6 +86,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_env = "sgx",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
@@ -111,6 +112,7 @@ pub(crate) use libc::{
     target_os = "netbsd",
     target_os = "redox",
     target_os = "fuchsia",
+    target_env = "sgx",
 )))]
 pub(crate) use libc::{
     ip_mreq_source as IpMreqSource, IP_ADD_SOURCE_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP,
@@ -123,7 +125,7 @@ pub(crate) use libc::{
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
-    target_vendor = "apple"
+    target_vendor = "apple",
 )))]
 pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 #[cfg(any(
@@ -1080,6 +1082,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_env = "sgx",
 )))]
 pub(crate) fn to_mreqn(
     multiaddr: &Ipv4Addr,

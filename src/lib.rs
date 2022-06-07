@@ -129,7 +129,7 @@ mod sys;
 #[path = "sys/windows.rs"]
 mod sys;
 
-#[cfg(not(any(windows, unix)))]
+#[cfg(not(any(windows, unix, target_env = "sgx")))]
 compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
